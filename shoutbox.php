@@ -1,0 +1,30 @@
+<?php require_once("include/bittorrent.php");dbconn(true);gzip();if($CURUSER){
+if($CURUSER["schoutboxpos"] == 'no'){echo '<table class=main align=center width=100%  style=\"border:0;\" cellpadding=0 cellspacing=0><tr><td align=center style=\"border:0;\" class=embedded></br><h1>Sorry</h1><table width=100% style=\"border:0;\" cellspacing=0 cellpadding=10><tr><td class=text align=center>Yo are BAN from Shoutbox.</td></tr></table></td></tr></table>';exit;}
+if($_GET["do"] == "shout"){$shout = unesc(format_comment($_GET["shout"]));
+if($shout == "/lolya" && get_user_class() >= UC_MODERATOR){sql_query("TRUNCATE TABLE shoutbox2");die("Cообщений нет");}
+$sender = $CURUSER["id"];if(!empty($shout)){$shout = preg_replace("/\/me /", $CURUSER["username"]." ", $shout);$datee = get_date_time();
+sql_query("INSERT INTO shoutbox2 (text, date, userid, class, username, warned) VALUES 
+(" . implode(", ", array_map("sqlesc", array($shout, $datee, $sender, get_user_class(), 
+$CURUSER['username'], $CURUSER['warned']))) . ")") or sqlerr(__FILE__, __LINE__);
+}else print("<script>alert('Введи сообщение');</script>");}
+elseif($_GET["do"] == "delete" && get_user_class() >= UC_MODERATOR && is_valid_id($_GET["id"])){$id = $_GET["id"];
+sql_query("DELETE FROM shoutbox2 WHERE id = $id") or sqlerr(__FILE__,__LINE__);}
+/*if($CURUSER["bot_pos"] == "no") $res = sql_query("SELECT * FROM shoutbox2 WHERE userid <> 2 ORDER BY date DESC LIMIT 50 ") or sqlerr(__FILE__, __LINE__);
+else $res = sql_query("SELECT * FROM shoutbox2 ORDER BY date DESC LIMIT 50 ") or sqlerr(__FILE__, __LINE__);*/
+$res = sql_query("SELECT *, userid as uid FROM shoutbox2 ORDER BY id DESC LIMIT 100") or sqlerr(__FILE__,__LINE__);
+if(mysql_num_rows($res) == 0) die("Сообщений нет");print("\n");while ($arr = mysql_fetch_array($res)){
+print("<table cellspasing=\"0\" style=\"border:0;background:none;\"><tr valign=\"baseline\" style=\"border:0;background:none;\">");
+if($arr["warned"] == "yes") $warn = "<img src=\"pic/warned.gif\" alt=\"Warned\"/>";else $warn = "";$username = $arr["username"];
+$pm = "<a href=\"#\" onclick=\"javascript:window.open('sendpm_".$arr['uid']."', 'Отправить PM', 'width=650, height=365');return false;\" title=\"Отправить ЛС\"><img src=\"pic/pn_inbox.gif\" border=\"0\"/></a>\n";
+$prof = "<a href='user_".$arr["uid"]."' target='_blank'><img src=\"pic/info/guest.gif\" border='0' title=\"Посмотреть профиль\"/></a>\n";
+$private = "<span onclick=\"javascript: parent.document.shoutform.shout.focus();parent.document.shoutform.shout.value='privat($username) '+parent.document.shoutform.shout.value;return false;\" style=\"cursor:pointer;color:red;font-weight:bold;\"><img title=\"Приват\" src=\"pic/info/group.gif\" border=\"0\"/></span>";
+if (get_user_class() >= UC_MODERATOR){$del = "<span onclick=\"deleteShout($arr[id]);\"><img src=\"pic/warned2.gif\" title=\"Удалить\" style=\"border:0;\"/></span>\n";}$arr["text"] = str_replace("[$CURUSER[username]]","<b style='color:red;'>$CURUSER[username]</b>",$arr["text"]); 
+if($arr["uid"] == "0"){print("<td width=\"1%\" style=\"border:0;\"><span class=\"date\"><font size=\"1\" color=\"grey\"><i>".nicetime($arr["date"], true)."</i></font>\n\n\n".$del."<b><font color=\"DarkOrange\">[Системное]:</font><font color=\"black\">\n\n\n".$arr["text"]."</font></b></span></td>\n");
+}else{if (strpos($arr["text"], "privat($CURUSER[username])") !== false){$variabila = "privat($CURUSER[username])";$nume = substr($variabila, 7);$nume = substr($nume, 0, strlen($nume)-1);
+if(($CURUSER["username"] == $nume) || ($CURUSER["id"] == "".$arr["uid"]."")){$arr["text"] = str_replace("privat($CURUSER[username])","<b style='color:red;'>$CURUSER[username]</b>:",$arr["text"]);$arr["text"] = preg_replace("/privat\(([^()<>\s]+?)\)/i","<b style='color:orange;'>\\1</b>", $arr["text"]);
+print("<td width=\"1%\" style=\"border:0;background:none;\"><span class=\"date\"><font size=\"1\" color=\"grey\"><i>".nicetime($arr["date"], true)."</i></font></span>\n".$del.$prof.$pm.$private." <b><a href=\"user_".$arr["uid"]."\" onclick=\"javascript: parent.document.shoutform.shout.focus();parent.document.shoutform.shout.value='[b]".$username.":[/b] '+parent.document.shoutform.shout.value;return false;\">".get_user_class_color($arr["class"], $arr["username"])."</a></b>$warn: ".($arr["text"])."</td>\n");
+}}elseif((($CURUSER["id"] == "".$arr["uid"]."") OR (get_user_class() >= UC_MODERATOR)) AND (get_user_class() >= $arr["class"]) AND (strpos($arr["text"], "privat(") !== false)){$arr["text"] = preg_replace("/privat\(([^()<>\s]+?)\)/i","<b style='color:orange;'>\\1</b>", $arr["text"]);
+print("<td width=\"1%\" style=\"border:0;background:none;\"><span class=\"date\"><font size=\"1\" color=\"grey\"><i>".nicetime($arr["date"], true)."</i></font></span>\n".$del.$prof.$pm.$private." <b><a href=\"user_".$arr["uid"]."\" onclick=\"javascript: parent.document.shoutform.shout.focus();parent.document.shoutform.shout.value='[b]".$username.":[/b] '+parent.document.shoutform.shout.value;return false;\">".get_user_class_color($arr["class"], $arr["username"])."</a></b>$warn: ".($arr["text"])."</td>\n");
+}elseif(strpos($arr["text"], "privat(") !== false){}else{print("<td width=\"1%\" style=\"border:0;background:none;\"><span class='date'><font size=\"1\" color=\"grey\"><i>".nicetime($arr["date"], true)."</i></font></span>\n".$del.$prof.$pm.$private." <b><a href=\"user_".$arr["uid"]."\" onclick=\"javascript: parent.document.shoutform.shout.focus();parent.document.shoutform.shout.value='[b]".$username.":[/b] '+parent.document.shoutform.shout.value;return false;\">".get_user_class_color($arr["class"], $arr["username"])."</a></b>$warn: ".($arr["text"])."</td>\n");}}
+print("</tr></table>");}}else{?><html><head><meta http-equiv='refresh' content='0;url=/'></head>
+<body style="background:#2F4F4F no-repeat center center fixed;-webkit-background-size:cover;-moz-background-size:cover;-o-background-size:cover;background-size:cover;"></body></html><?}?>
